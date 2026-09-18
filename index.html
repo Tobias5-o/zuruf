@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Zuruf</title>
+<meta name="description" content="Zuruf – dein Eingang in der Hosentasche. Nur das Aussehen, noch ohne Funktion.">
+<meta name="theme-color" content="#2C393B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;800&display=swap');
+
+  :root{
+    --petrol:#2C393B;
+    --functional:#1E2627;
+    --cream:#F6F4EE;
+    --surface:#EBE8E0;
+    --ocher:#A66A0E;
+    --radius-button:6px;
+    --radius-surface:9px;
+    --muted: rgb(30 38 39 / 55%);
+    --hairline: rgb(30 38 39 / 12%);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:#DEDBD3; /* neutrale Werkbank-Fläche, nur zur Vorschau am Rechner — nicht Teil der Marke */
+    font-family:Heebo, sans-serif;
+    color:var(--petrol);
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .icon{width:18px; height:18px; flex:0 0 auto; display:block; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round;}
+  .icon--sm{width:15px; height:15px;}
+  .icon--lg{width:22px; height:22px;}
+
+  /* ---- Handy-Rahmen für die Vorschau am Rechner ---- */
+  .phone-shell{
+    max-width:430px;
+    margin:0 auto;
+    min-height:100vh;
+    background:var(--cream);
+    position:relative;
+    overflow-x:hidden;
+    box-shadow:0 0 0 1px rgb(30 38 39 / 6%), 0 30px 70px rgb(30 38 39 / 18%);
+  }
+  @media (min-width:431px){
+    body{padding:32px 16px;}
+    .phone-shell{min-height:calc(100vh - 64px); border-radius:28px; overflow:hidden;}
+  }
+
+  /* ---- Screens ---- */
+  .screen{display:none; min-height:100%; flex-direction:column;}
+  .screen.is-active{display:flex;}
+
+  /* ---- Anmelde-Bildschirm ---- */
+  .screen--login{
+    justify-content:center;
+    align-items:center;
+    text-align:center;
+    gap:20px;
+    padding:40px 28px;
+    min-height:100vh;
+  }
+  .login-logo{width:56px; height:56px; object-fit:contain;}
+  .login-title{font:700 32px/1.15 Heebo, sans-serif; margin:0; color:var(--petrol);}
+  .kicker{
+    display:inline-flex; align-items:flex-start; gap:10px; margin:0;
+    font:600 13px/1.3 Heebo, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--petrol);
+  }
+  .kicker::before{content:""; width:22px; height:3px; margin-top:.5em; border-radius:2px; background:var(--ocher); flex:0 0 22px;}
+  .login-form{width:100%; display:flex; flex-direction:column; gap:14px; margin-top:8px;}
+  .field{width:100%; text-align:left;}
+  .field label{display:block; font:600 12px/1.3 Heebo, sans-serif; margin-bottom:6px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;}
+  .field input{
+    width:100%; padding:14px 16px; font:400 16px/1.3 Heebo, sans-serif; color:var(--petrol);
+    background:#fff; border:1px solid var(--hairline); border-radius:var(--radius-button);
+  }
+  .field input:focus{outline:2px solid rgb(166 106 14 / 30%); outline-offset:1px;}
+  .login-link{font:400 14px/1.3 Heebo, sans-serif; color:var(--muted); text-decoration:underline; text-underline-offset:3px;}
+  .checkbox-field{display:flex; align-items:center; gap:10px; font:400 15px/1.3 Heebo, sans-serif; color:var(--petrol); cursor:pointer; text-align:left;}
+  .checkbox-field input{width:18px; height:18px; accent-color:var(--ocher);}
+  .login-status{min-height:20px; font:400 14px/1.4 Heebo, sans-serif; color:var(--muted); margin:0;}
+  .login-status.is-error{color:#a3352b;}
+
+  /* ---- Buttons (nach tf-button Token) ---- */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    min-height:48px; padding:12px 20px; border:1px solid transparent; border-radius:var(--radius-button);
+    font:700 16px/1.2 Heebo, sans-serif; cursor:pointer; transition:transform .18s ease, box-shadow .18s ease;
+    width:100%;
+  }
+  .btn:hover{transform:translateY(-1px); box-shadow:0 8px 18px rgb(30 38 39 / 12%);}
+  .btn--primary{background:var(--ocher); color:var(--cream); border-color:var(--ocher);}
+  .btn--secondary{background:transparent; color:var(--petrol); border-color:var(--hairline);}
+
+  /* ---- App-Header ---- */
+  .app-header{
+    background:var(--petrol); color:var(--cream);
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 22px; gap:12px; flex:0 0 auto;
+  }
+  .app-header .brand{display:flex; align-items:center; gap:10px;}
+  .app-header .brand img{width:24px; height:24px; object-fit:contain;}
+  .app-header .brand span{font:700 19px/1 Heebo, sans-serif; letter-spacing:-.01em;}
+  .icon-btn{
+    width:36px; height:36px; border-radius:50%; border:none; background:transparent; color:var(--cream);
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .icon-btn:hover{background:rgb(246 244 238 / 10%);}
+
+  /* ---- App-Body ---- */
+  .app-body{flex:1 1 auto; overflow-y:auto; padding:22px 22px 148px; display:flex; flex-direction:column; gap:32px;}
+
+  .filter-row{display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch;}
+  .filter-row::-webkit-scrollbar{display:none;}
+  .chip{
+    flex:0 0 auto; padding:8px 15px; border-radius:999px; border:1px solid var(--hairline);
+    font:600 13px/1.2 Heebo, sans-serif; letter-spacing:.02em; color:var(--muted); background:transparent; white-space:nowrap; cursor:pointer;
+  }
+  .chip.is-selected{background:var(--petrol); border-color:var(--petrol); color:var(--cream);}
+
+  .section-heading{
+    font:700 22px/1.2 Heebo, sans-serif; color:var(--functional); margin:0 0 16px; letter-spacing:-.01em;
+  }
+  .section-heading--muted{color:var(--muted); font-weight:700;}
+
+  .entry-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:1px; background:var(--hairline); border-radius:var(--radius-surface); overflow:hidden;}
+  .entry-card{
+    background:var(--cream); padding:16px 16px;
+    display:flex; align-items:flex-start; gap:14px;
+  }
+  .art-badge{
+    flex:0 0 auto; width:34px; height:34px; border-radius:50%;
+    background:var(--surface); color:var(--functional);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .entry-main{flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:4px;}
+  .entry-title{font:700 16px/1.3 Heebo, sans-serif; color:var(--functional); margin:0;}
+  .entry-meta{font:400 13px/1.4 Heebo, sans-serif; color:var(--muted); margin:0; letter-spacing:.01em;}
+  .entry-thumb{
+    flex:0 0 auto; width:44px; height:44px; border-radius:7px; background:var(--surface); color:var(--muted);
+    display:flex; align-items:center; justify-content:center; border:1px solid var(--hairline);
+  }
+
+  /* ---- Erfassungsleiste ---- */
+  .capture-bar{
+    position:sticky; bottom:0; left:0; right:0;
+    background:var(--petrol);
+    display:flex; align-items:flex-end; justify-content:space-around;
+    padding:12px 12px calc(14px + env(safe-area-inset-bottom));
+    flex:0 0 auto;
+  }
+  .capture-btn{
+    background:none; border:none; color:rgb(246 244 238 / 85%); display:flex; flex-direction:column; align-items:center; gap:7px;
+    font:600 11px/1.1 Heebo, sans-serif; letter-spacing:.04em; text-transform:uppercase; padding:6px 4px; min-width:56px; cursor:pointer;
+  }
+  .capture-btn .glyph{
+    width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background:rgb(246 244 238 / 8%);
+  }
+  .capture-btn--primary{margin-top:-24px; color:var(--cream);}
+  .capture-btn--primary .glyph{
+    width:62px; height:62px; background:var(--ocher); color:var(--cream);
+    box-shadow:0 10px 22px rgb(166 106 14 / 45%);
+  }
+  .capture-btn--primary .icon{width:24px; height:24px;}
+
+  /* ---- Einstellungen ---- */
+  .settings-header{
+    display:flex; align-items:center; gap:14px; padding:20px 22px; flex:0 0 auto;
+    border-bottom:1px solid var(--hairline);
+  }
+  .settings-header h1{font:700 20px/1.2 Heebo, sans-serif; color:var(--functional); margin:0;}
+  .back-btn{background:none; border:none; color:var(--petrol); cursor:pointer; padding:4px; display:flex;}
+  .settings-list{list-style:none; margin:0; padding:8px 0; flex:1 1 auto;}
+  .settings-list li{
+    display:flex; align-items:center; justify-content:space-between; padding:16px 22px;
+    border-bottom:1px solid var(--hairline); font:400 16px/1.3 Heebo, sans-serif;
+  }
+  .settings-list li span.value{color:var(--muted); font-size:14px;}
+  .settings-list li.settings-action{cursor:pointer;}
+  .settings-list li.settings-action:hover{background:var(--surface);}
+
+  /* ---- Vorschlags-Karte (Overlay) ---- */
+  .overlay{
+    display:none; position:fixed; inset:0; background:rgb(30 38 39 / 55%);
+    align-items:flex-end; justify-content:center; z-index:50; padding:0;
+  }
+  .overlay.is-active{display:flex;}
+  .sheet{
+    width:100%; max-width:430px; max-height:88vh; overflow-y:auto;
+    background:var(--cream); border-radius:20px 20px 0 0; padding:24px 22px calc(24px + env(safe-area-inset-bottom));
+    display:flex; flex-direction:column; gap:16px;
+  }
+  .sheet-handle{width:36px; height:4px; border-radius:2px; background:var(--hairline); margin:0 auto 4px;}
+  .sheet .kicker{font-size:12px;}
+  .sheet-quote{
+    font:400 16px/1.5 Heebo, sans-serif; color:var(--petrol); font-style:italic;
+    background:var(--surface); border-radius:var(--radius-surface); padding:14px 16px; margin:0;
+  }
+  .art-chip-group{display:flex; flex-wrap:wrap; gap:8px;}
+  .art-chip{
+    padding:9px 14px; border-radius:999px; border:1px solid var(--hairline); background:transparent;
+    font:600 13px/1.1 Heebo, sans-serif; color:var(--petrol);
+  }
+  .art-chip.is-selected{background:var(--petrol); border-color:var(--petrol); color:var(--cream);}
+  .sheet-actions{display:flex; gap:12px; margin-top:4px;}
+  .sheet-actions .btn{width:auto; flex:1 1 0;}
+
+  /* Utility */
+  .visually-hidden{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap;}
+</style>
+</head>
+<body>
+
+<!-- Wiederverwendete Linien-Icons, einfarbig (currentColor) statt bunter Emojis -->
+<svg class="visually-hidden" aria-hidden="true">
+  <defs>
+    <symbol id="icon-check" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5L20 6"/></symbol>
+    <symbol id="icon-note" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 8.5h7M8.5 12.5h7M8.5 16.5h4"/></symbol>
+    <symbol id="icon-chat" viewBox="0 0 24 24"><path d="M4 5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-9l-4.5 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></symbol>
+    <symbol id="icon-receipt" viewBox="0 0 24 24"><path d="M6 2.5h12v19l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5-2 1.5v-19z"/><path d="M9 7.5h6M9 11h6M9 14.5h4"/></symbol>
+    <symbol id="icon-idea" viewBox="0 0 24 24"><path d="M9.5 18h5M10.5 21h3M12 3a6 6 0 0 0-3 11.2c.6.35 1 1 1 1.8h4c0-.8.4-1.45 1-1.8A6 6 0 0 0 12 3z"/></symbol>
+    <symbol id="icon-image" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M21 15.5l-5.3-5.3L9 17"/></symbol>
+    <symbol id="icon-users" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><circle cx="17.5" cy="9" r="2.2"/><path d="M16 14.3c2.3.4 4 2 4 4.7"/></symbol>
+    <symbol id="icon-film" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3 9.5h18M7.5 5.5v4M12 5.5v4M16.5 5.5v4"/></symbol>
+    <symbol id="icon-spark" viewBox="0 0 24 24"><path d="M12 2.5l1.7 5.1 5.1 1.7-5.1 1.7L12 16.1l-1.7-5.1-5.1-1.7 5.1-1.7L12 2.5z"/></symbol>
+    <symbol id="icon-bolt" viewBox="0 0 24 24"><path d="M13 2 4.5 14h6l-1 8 9-12h-6l1-8z"/></symbol>
+    <symbol id="icon-mic" viewBox="0 0 24 24"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5M9 21.5h6"/></symbol>
+    <symbol id="icon-camera" viewBox="0 0 24 24"><path d="M4 8h3l1.4-2h7.2L17 8h3a1 1 0 0 1 1 1v9.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.7" r="3.4"/></symbol>
+    <symbol id="icon-video" viewBox="0 0 24 24"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3.2v10.4l-6-3.2"/></symbol>
+    <symbol id="icon-keyboard" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h12"/></symbol>
+    <symbol id="icon-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2.5 12h3M18.5 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></symbol>
+    <symbol id="icon-back" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></symbol>
+  </defs>
+</svg>
+
+<div class="phone-shell">
+
+  <!-- ============ ANMELDE-BILDSCHIRM ============ -->
+  <section id="screen-login" class="screen is-active screen--login">
+    <img class="login-logo" src="icons/signet-dunkel-128.png" alt="">
+    <p class="kicker">Dein Eingang in der Hosentasche</p>
+    <h1 class="login-title">Zuruf</h1>
+    <form class="login-form" id="login-form">
+      <div class="field">
+        <label for="login-email">E-Mail</label>
+        <input id="login-email" type="email" placeholder="du@example.com" autocomplete="email" required>
+      </div>
+      <label class="checkbox-field">
+        <input type="checkbox" id="login-stay" checked>
+        Angemeldet bleiben
+      </label>
+      <button type="submit" class="btn btn--primary" id="login-submit">Anmelden</button>
+    </form>
+    <p class="login-status" id="login-status" aria-live="polite"></p>
+  </section>
+
+  <!-- ============ HAUPT-APP ============ -->
+  <section id="screen-app" class="screen screen--app">
+    <header class="app-header">
+      <div class="brand">
+        <img src="icons/signet-hell-64.png" alt="">
+        <span>Zuruf</span>
+      </div>
+      <button class="icon-btn" data-open-screen="screen-settings" aria-label="Einstellungen">
+        <svg class="icon"><use href="#icon-gear"/></svg>
+      </button>
+    </header>
+
+    <div class="app-body">
+
+      <div class="filter-row" role="tablist" aria-label="Nach Art filtern">
+        <button class="chip is-selected">Alle</button>
+        <button class="chip">Aufgabe</button>
+        <button class="chip">Notiz</button>
+        <button class="chip">Kundennotiz</button>
+        <button class="chip">Beleg</button>
+        <button class="chip">Idee</button>
+        <button class="chip">Projektdoku</button>
+        <button class="chip">Team-Hinweis</button>
+        <button class="chip">Social Media</button>
+        <button class="chip">Inspiration</button>
+        <button class="chip">Auftrag</button>
+      </div>
+
+      <div>
+        <h2 class="section-heading">Heute</h2>
+        <ul class="entry-list">
+          <li class="entry-card">
+            <div class="art-badge" aria-hidden="true"><svg class="icon icon--sm"><use href="#icon-check"/></svg></div>
+            <div class="entry-main">
+              <p class="entry-title">Rückruf bei Frau Berger wegen Angebot</p>
+              <p class="entry-meta">Aufgabe · Fällig heute · Ziel: Kalender · Sprechen</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <div>
+        <h2 class="section-heading section-heading--muted">Weitere Einträge</h2>
+        <ul class="entry-list">
+          <li class="entry-card">
+            <div class="art-badge" aria-hidden="true"><svg class="icon icon--sm"><use href="#icon-receipt"/></svg></div>
+            <div class="entry-main">
+              <p class="entry-title">Tanken – Aral, 58,20 €</p>
+              <p class="entry-meta">Beleg · offen · Foto</p>
+            </div>
+            <div class="entry-thumb" aria-hidden="true"><svg class="icon"><use href="#icon-camera"/></svg></div>
+          </li>
+          <li class="entry-card">
+            <div class="art-badge" aria-hidden="true"><svg class="icon icon--sm"><use href="#icon-chat"/></svg></div>
+            <div class="entry-main">
+              <p class="entry-title">Hacienda-Gast wünscht früheren Check-in</p>
+              <p class="entry-meta">Kundennotiz · Projekt Hacienda · Sprechen</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+    </div>
+
+    <nav class="capture-bar">
+      <button class="capture-btn" data-open-overlay data-quelle="Video"><span class="glyph"><svg class="icon"><use href="#icon-video"/></svg></span>Video</button>
+      <button class="capture-btn" data-open-overlay data-quelle="Sprechen"><span class="glyph"><svg class="icon"><use href="#icon-mic"/></svg></span>Sprechen</button>
+      <button class="capture-btn capture-btn--primary" data-open-overlay data-quelle="Foto"><span class="glyph"><svg class="icon"><use href="#icon-camera"/></svg></span>Foto</button>
+      <button class="capture-btn" data-open-overlay data-quelle="Tippen"><span class="glyph"><svg class="icon"><use href="#icon-keyboard"/></svg></span>Tippen</button>
+    </nav>
+  </section>
+
+  <!-- ============ EINSTELLUNGEN ============ -->
+  <section id="screen-settings" class="screen screen--settings">
+    <div class="settings-header">
+      <button class="back-btn" data-open-screen="screen-app" aria-label="Zurück">
+        <svg class="icon icon--lg"><use href="#icon-back"/></svg>
+      </button>
+      <h1>Einstellungen</h1>
+    </div>
+    <ul class="settings-list">
+      <li><span>Sprache der Spracherkennung</span><span class="value">Deutsch</span></li>
+      <li><span>Konto</span><span class="value" id="settings-account">–</span></li>
+      <li class="settings-action" id="settings-logout"><span>Abmelden</span><span class="value"></span></li>
+      <li><span>Über Zuruf</span><span class="value">Version 0.2 · Anmeldung angebunden</span></li>
+    </ul>
+  </section>
+
+</div>
+
+<!-- ============ VORSCHLAGS-KARTE ============ -->
+<div id="suggestion-overlay" class="overlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <p class="kicker">Erkannt aus: <span id="suggestion-quelle">Sprechen</span></p>
+    <p class="sheet-quote">„Ich muss noch das Angebot an Familie Berger für Hacienda rausschicken, am besten bis Freitag.“</p>
+
+    <div class="field">
+      <label for="suggestion-titel">Titel</label>
+      <input id="suggestion-titel" type="text" value="Angebot an Familie Berger senden">
+    </div>
+
+    <div class="field">
+      <label>Art</label>
+      <div class="art-chip-group">
+        <button class="art-chip is-selected">Aufgabe</button>
+        <button class="art-chip">Notiz</button>
+        <button class="art-chip">Kundennotiz</button>
+        <button class="art-chip">Beleg</button>
+        <button class="art-chip">Idee</button>
+        <button class="art-chip">Projektdoku</button>
+        <button class="art-chip">Team-Hinweis</button>
+        <button class="art-chip">Social Media</button>
+        <button class="art-chip">Inspiration</button>
+        <button class="art-chip">Auftrag</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="suggestion-ziel">Ziel</label>
+      <input id="suggestion-ziel" type="text" value="Trello">
+    </div>
+
+    <div class="field">
+      <label for="suggestion-faelligkeit">Fälligkeit</label>
+      <input id="suggestion-faelligkeit" type="date">
+    </div>
+
+    <div class="sheet-actions">
+      <button class="btn btn--secondary" data-close-overlay>Verwerfen</button>
+      <button class="btn btn--primary" data-close-overlay>Speichern</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+  // ---- Zuruf: Anbindung an Supabase (nur Anmeldung heute; Sprechen/Modell/Speichern folgen). ----
+  var SUPABASE_URL = 'https://odqgwuktgoxqkgrqpmys.supabase.co';
+  var SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_r5WKuTn6fIq_YdFIfIAAnw_7NBazRRc';
+  var STAY_SIGNED_IN_KEY = 'zuruf_stay_signed_in';
+
+  function getStaySignedInPref(){
+    var v = localStorage.getItem(STAY_SIGNED_IN_KEY);
+    return v === null ? true : v === 'true';
+  }
+
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      storage: getStaySignedInPref() ? window.localStorage : window.sessionStorage
+    }
+  });
+
+  function showScreen(id){
+    document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('is-active'); });
+    document.getElementById(id).classList.add('is-active');
+  }
+
+  function setLoginStatus(text, isError){
+    var el = document.getElementById('login-status');
+    el.textContent = text || '';
+    el.classList.toggle('is-error', !!isError);
+  }
+
+  function onSignedIn(session){
+    document.getElementById('settings-account').textContent = session.user.email || '–';
+    setLoginStatus('');
+    showScreen('screen-app');
+  }
+
+  // Bereits angemeldet (z.B. nach Neuladen) oder gerade per Link zurückgekommen?
+  sb.auth.getSession().then(function(res){
+    if (res.data.session) onSignedIn(res.data.session);
+  });
+  sb.auth.onAuthStateChange(function(event, session){
+    if (event === 'SIGNED_IN' && session) onSignedIn(session);
+    if (event === 'SIGNED_OUT') showScreen('screen-login');
+  });
+
+  document.getElementById('login-stay').addEventListener('change', function(e){
+    localStorage.setItem(STAY_SIGNED_IN_KEY, e.target.checked ? 'true' : 'false');
+  });
+
+  document.getElementById('login-form').addEventListener('submit', function(e){
+    e.preventDefault();
+    var email = document.getElementById('login-email').value.trim();
+    if (!email) { setLoginStatus('Bitte E-Mail-Adresse eingeben.', true); return; }
+    var submitBtn = document.getElementById('login-submit');
+    submitBtn.disabled = true;
+    setLoginStatus('Schicke Mail …');
+    sb.auth.signInWithOtp({
+      email: email,
+      options: { emailRedirectTo: window.location.origin + window.location.pathname }
+    }).then(function(res){
+      submitBtn.disabled = false;
+      if (res.error) {
+        setLoginStatus('Fehler: ' + res.error.message, true);
+      } else {
+        setLoginStatus('Mail verschickt an ' + email + ' — öffne sie auf diesem Rechner und klick den Link darin.');
+      }
+    });
+  });
+
+  document.getElementById('settings-logout').addEventListener('click', function(){
+    sb.auth.signOut();
+  });
+
+  // Nur Bildschirm-Wechsel und Karte ein-/ausblenden — keine echte Funktion (kein Mikrofon, keine Kamera, kein Speichern).
+  document.querySelectorAll('[data-open-screen]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var targetId = btn.getAttribute('data-open-screen');
+      document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('is-active'); });
+      document.getElementById(targetId).classList.add('is-active');
+    });
+  });
+
+  var overlay = document.getElementById('suggestion-overlay');
+  var quelleLabel = document.getElementById('suggestion-quelle');
+  document.querySelectorAll('[data-open-overlay]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      quelleLabel.textContent = btn.getAttribute('data-quelle') || 'Sprechen';
+      overlay.classList.add('is-active');
+    });
+  });
+  document.querySelectorAll('[data-close-overlay]').forEach(function(btn){
+    btn.addEventListener('click', function(){ overlay.classList.remove('is-active'); });
+  });
+
+  document.querySelectorAll('.art-chip').forEach(function(chip){
+    chip.addEventListener('click', function(){
+      document.querySelectorAll('.art-chip').forEach(function(c){ c.classList.remove('is-selected'); });
+      chip.classList.add('is-selected');
+    });
+  });
+
+  document.querySelectorAll('.filter-row .chip').forEach(function(chip){
+    chip.addEventListener('click', function(){
+      document.querySelectorAll('.filter-row .chip').forEach(function(c){ c.classList.remove('is-selected'); });
+      chip.classList.add('is-selected');
+    });
+  });
+</script>
+
+</body>
+</html>
