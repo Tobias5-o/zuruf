@@ -156,6 +156,13 @@
     padding:12px 12px calc(14px + env(safe-area-inset-bottom));
     flex:0 0 auto;
   }
+  .toast{
+    position:fixed; left:50%; bottom:calc(96px + env(safe-area-inset-bottom)); transform:translateX(-50%);
+    background:var(--functional); color:var(--cream); font:600 13px/1.3 Heebo, sans-serif;
+    padding:10px 16px; border-radius:999px; margin:0; opacity:0; pointer-events:none; transition:opacity .2s ease;
+    max-width:80%; text-align:center; z-index:60;
+  }
+  .toast.is-visible{opacity:1;}
   .capture-btn{
     background:none; border:none; color:rgb(246 244 238 / 85%); display:flex; flex-direction:column; align-items:center; gap:7px;
     font:600 11px/1.1 Heebo, sans-serif; letter-spacing:.04em; text-transform:uppercase; padding:6px 4px; min-width:56px; cursor:pointer;
@@ -200,10 +207,14 @@
   }
   .sheet-handle{width:36px; height:4px; border-radius:2px; background:var(--hairline); margin:0 auto 4px;}
   .sheet .kicker{font-size:12px;}
-  .sheet-quote{
-    font:400 16px/1.5 Heebo, sans-serif; color:var(--petrol); font-style:italic;
-    background:var(--surface); border-radius:var(--radius-surface); padding:14px 16px; margin:0;
+  .sheet-quote-input{
+    width:100%; font:400 16px/1.5 Heebo, sans-serif; color:var(--petrol); font-style:italic;
+    background:var(--surface); border:1px solid transparent; border-radius:var(--radius-surface);
+    padding:14px 16px; margin:0; resize:vertical;
   }
+  .sheet-quote-input:focus{outline:none; border-color:rgb(166 106 14 / 40%);}
+  .sheet-quote-input.is-listening{border-color:var(--ocher); animation:pulse-listen 1.4s ease-in-out infinite;}
+  @keyframes pulse-listen{ 0%,100%{ box-shadow:0 0 0 0 rgb(166 106 14 / 25%);} 50%{ box-shadow:0 0 0 6px rgb(166 106 14 / 0%);} }
   .art-chip-group{display:flex; flex-wrap:wrap; gap:8px;}
   .art-chip{
     padding:9px 14px; border-radius:999px; border:1px solid var(--hairline); background:transparent;
@@ -332,11 +343,12 @@
     </div>
 
     <nav class="capture-bar">
-      <button class="capture-btn" data-open-overlay data-quelle="Video"><span class="glyph"><svg class="icon"><use href="#icon-video"/></svg></span>Video</button>
-      <button class="capture-btn" data-open-overlay data-quelle="Sprechen"><span class="glyph"><svg class="icon"><use href="#icon-mic"/></svg></span>Sprechen</button>
-      <button class="capture-btn capture-btn--primary" data-open-overlay data-quelle="Foto"><span class="glyph"><svg class="icon"><use href="#icon-camera"/></svg></span>Foto</button>
-      <button class="capture-btn" data-open-overlay data-quelle="Tippen"><span class="glyph"><svg class="icon"><use href="#icon-keyboard"/></svg></span>Tippen</button>
+      <button class="capture-btn" id="btn-video"><span class="glyph"><svg class="icon"><use href="#icon-video"/></svg></span>Video</button>
+      <button class="capture-btn" id="btn-sprechen"><span class="glyph"><svg class="icon"><use href="#icon-mic"/></svg></span>Sprechen</button>
+      <button class="capture-btn capture-btn--primary" id="btn-foto"><span class="glyph"><svg class="icon"><use href="#icon-camera"/></svg></span>Foto</button>
+      <button class="capture-btn" id="btn-tippen"><span class="glyph"><svg class="icon"><use href="#icon-keyboard"/></svg></span>Tippen</button>
     </nav>
+    <p class="toast" id="app-toast" aria-live="polite"></p>
   </section>
 
   <!-- ============ EINSTELLUNGEN ============ -->
@@ -362,17 +374,17 @@
   <div class="sheet">
     <div class="sheet-handle"></div>
     <p class="kicker">Erkannt aus: <span id="suggestion-quelle">Sprechen</span></p>
-    <p class="sheet-quote">„Ich muss noch das Angebot an Familie Berger für Hacienda rausschicken, am besten bis Freitag.“</p>
+    <textarea id="capture-text" class="sheet-quote-input" rows="3" placeholder="Höre zu …"></textarea>
 
     <div class="field">
       <label for="suggestion-titel">Titel</label>
-      <input id="suggestion-titel" type="text" value="Angebot an Familie Berger senden">
+      <input id="suggestion-titel" type="text" placeholder="noch kein Vorschlag">
     </div>
 
     <div class="field">
       <label>Art</label>
-      <div class="art-chip-group">
-        <button class="art-chip is-selected">Aufgabe</button>
+      <div class="art-chip-group" id="suggestion-art-group">
+        <button class="art-chip">Aufgabe</button>
         <button class="art-chip">Notiz</button>
         <button class="art-chip">Kundennotiz</button>
         <button class="art-chip">Beleg</button>
@@ -387,7 +399,7 @@
 
     <div class="field">
       <label for="suggestion-ziel">Ziel</label>
-      <input id="suggestion-ziel" type="text" value="Trello">
+      <input id="suggestion-ziel" type="text" placeholder="noch kein Vorschlag">
     </div>
 
     <div class="field">
@@ -526,12 +538,30 @@
 
   var overlay = document.getElementById('suggestion-overlay');
   var quelleLabel = document.getElementById('suggestion-quelle');
-  document.querySelectorAll('[data-open-overlay]').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      quelleLabel.textContent = btn.getAttribute('data-quelle') || 'Sprechen';
-      overlay.classList.add('is-active');
-    });
-  });
+  var captureText = document.getElementById('capture-text');
+  var toastEl = document.getElementById('app-toast');
+  var toastTimer = null;
+
+  function showToast(message){
+    toastEl.textContent = message;
+    toastEl.classList.add('is-visible');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toastEl.classList.remove('is-visible'); }, 2500);
+  }
+
+  function openCaptureSheet(quelle){
+    quelleLabel.textContent = quelle;
+    captureText.value = '';
+    captureText.readOnly = false;
+    captureText.classList.remove('is-listening');
+    captureText.placeholder = quelle === 'Sprechen' ? 'Höre zu …' : 'Schreib hier, was los ist …';
+    document.getElementById('suggestion-titel').value = '';
+    document.getElementById('suggestion-ziel').value = '';
+    document.getElementById('suggestion-faelligkeit').value = '';
+    document.querySelectorAll('#suggestion-art-group .art-chip').forEach(function(c){ c.classList.remove('is-selected'); });
+    overlay.classList.add('is-active');
+  }
+
   document.querySelectorAll('[data-close-overlay]').forEach(function(btn){
     btn.addEventListener('click', function(){ overlay.classList.remove('is-active'); });
   });
@@ -541,6 +571,61 @@
       document.querySelectorAll('.art-chip').forEach(function(c){ c.classList.remove('is-selected'); });
       chip.classList.add('is-selected');
     });
+  });
+
+  // ---- Tippen: Textfeld direkt beschreibbar. ----
+  document.getElementById('btn-tippen').addEventListener('click', function(){
+    openCaptureSheet('Tippen');
+    captureText.focus();
+  });
+
+  // ---- Sprechen: Spracherkennung des Browsers, sonst ohne Fehlermeldung zu Tippen. ----
+  var SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  function fallbackToTippen(){
+    quelleLabel.textContent = 'Tippen';
+    captureText.readOnly = false;
+    captureText.classList.remove('is-listening');
+    captureText.placeholder = 'Schreib hier, was los ist …';
+    captureText.focus();
+  }
+
+  document.getElementById('btn-sprechen').addEventListener('click', function(){
+    if (!SpeechRecognitionCtor) {
+      openCaptureSheet('Tippen');
+      return;
+    }
+    openCaptureSheet('Sprechen');
+    captureText.readOnly = true;
+    captureText.classList.add('is-listening');
+
+    var recognition = new SpeechRecognitionCtor();
+    recognition.lang = 'de-DE';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = function(event){
+      var transcript = event.results[0][0].transcript;
+      captureText.value = transcript;
+      captureText.readOnly = false;
+      captureText.classList.remove('is-listening');
+      document.getElementById('suggestion-titel').focus();
+    };
+    recognition.onerror = function(){
+      fallbackToTippen();
+    };
+    recognition.onend = function(){
+      if (captureText.readOnly) fallbackToTippen();
+    };
+    try { recognition.start(); } catch (e) { fallbackToTippen(); }
+  });
+
+  // ---- Foto/Video: folgen in Schritt 5. ----
+  document.getElementById('btn-foto').addEventListener('click', function(){
+    showToast('Foto kommt in Schritt 5 (Beleg-Ablage)');
+  });
+  document.getElementById('btn-video').addEventListener('click', function(){
+    showToast('Video kommt in Schritt 5');
   });
 
   document.querySelectorAll('.filter-row .chip').forEach(function(chip){
