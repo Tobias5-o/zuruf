@@ -82,7 +82,7 @@
     background:#fff; border:1px solid var(--hairline); border-radius:var(--radius-button);
   }
   .field input:focus{outline:2px solid rgb(166 106 14 / 30%); outline-offset:1px;}
-  .login-link{font:400 14px/1.3 Heebo, sans-serif; color:var(--muted); text-decoration:underline; text-underline-offset:3px;}
+  .login-link{font:400 14px/1.3 Heebo, sans-serif; color:var(--muted); text-decoration:underline; text-underline-offset:3px; background:none; border:none; padding:4px; cursor:pointer;}
   .checkbox-field{display:flex; align-items:center; gap:10px; font:400 15px/1.3 Heebo, sans-serif; color:var(--petrol); cursor:pointer; text-align:left;}
   .checkbox-field input{width:18px; height:18px; accent-color:var(--ocher);}
   .login-status{min-height:20px; font:400 14px/1.4 Heebo, sans-serif; color:var(--muted); margin:0;}
@@ -249,15 +249,20 @@
     <p class="kicker">Dein Eingang in der Hosentasche</p>
     <h1 class="login-title">Zuruf</h1>
     <form class="login-form" id="login-form">
-      <div class="field">
+      <div class="field" id="login-email-field">
         <label for="login-email">E-Mail</label>
         <input id="login-email" type="email" placeholder="du@example.com" autocomplete="email" required>
       </div>
-      <label class="checkbox-field">
+      <div class="field" id="login-code-field" hidden>
+        <label for="login-code">Code aus der E-Mail</label>
+        <input id="login-code" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="123456" autocomplete="one-time-code">
+      </div>
+      <label class="checkbox-field" id="login-stay-field">
         <input type="checkbox" id="login-stay" checked>
         Angemeldet bleiben
       </label>
       <button type="submit" class="btn btn--primary" id="login-submit">Anmelden</button>
+      <button type="button" class="login-link" id="login-back" hidden>Andere Adresse verwenden</button>
     </form>
     <p class="login-status" id="login-status" aria-live="polite"></p>
   </section>
@@ -441,31 +446,69 @@
   });
   sb.auth.onAuthStateChange(function(event, session){
     if (event === 'SIGNED_IN' && session) onSignedIn(session);
-    if (event === 'SIGNED_OUT') showScreen('screen-login');
+    if (event === 'SIGNED_OUT') { resetToEmailStep(); showScreen('screen-login'); }
   });
 
   document.getElementById('login-stay').addEventListener('change', function(e){
     localStorage.setItem(STAY_SIGNED_IN_KEY, e.target.checked ? 'true' : 'false');
   });
 
+  var codeSent = false;
+  var emailField = document.getElementById('login-email-field');
+  var codeField = document.getElementById('login-code-field');
+  var emailInput = document.getElementById('login-email');
+  var codeInput = document.getElementById('login-code');
+  var submitBtn = document.getElementById('login-submit');
+  var backBtn = document.getElementById('login-back');
+
+  function resetToEmailStep(){
+    codeSent = false;
+    emailField.hidden = false;
+    codeField.hidden = true;
+    codeInput.value = '';
+    submitBtn.textContent = 'Anmelden';
+    backBtn.hidden = true;
+    setLoginStatus('');
+  }
+
+  backBtn.addEventListener('click', resetToEmailStep);
+
   document.getElementById('login-form').addEventListener('submit', function(e){
     e.preventDefault();
-    var email = document.getElementById('login-email').value.trim();
+    var email = emailInput.value.trim();
     if (!email) { setLoginStatus('Bitte E-Mail-Adresse eingeben.', true); return; }
-    var submitBtn = document.getElementById('login-submit');
-    submitBtn.disabled = true;
-    setLoginStatus('Schicke Mail …');
-    sb.auth.signInWithOtp({
-      email: email,
-      options: { emailRedirectTo: window.location.origin + window.location.pathname }
-    }).then(function(res){
-      submitBtn.disabled = false;
-      if (res.error) {
-        setLoginStatus('Fehler: ' + res.error.message, true);
-      } else {
-        setLoginStatus('Mail verschickt an ' + email + ' — öffne sie auf diesem Rechner und klick den Link darin.');
-      }
-    });
+
+    if (!codeSent) {
+      submitBtn.disabled = true;
+      setLoginStatus('Schicke Code …');
+      sb.auth.signInWithOtp({ email: email }).then(function(res){
+        submitBtn.disabled = false;
+        if (res.error) {
+          setLoginStatus('Fehler: ' + res.error.message, true);
+        } else {
+          codeSent = true;
+          emailField.hidden = true;
+          codeField.hidden = false;
+          backBtn.hidden = false;
+          submitBtn.textContent = 'Bestätigen';
+          setLoginStatus('Code verschickt an ' + email + ' — trag ihn oben ein.');
+          codeInput.focus();
+        }
+      });
+    } else {
+      var code = codeInput.value.trim();
+      if (!code) { setLoginStatus('Bitte Code eingeben.', true); return; }
+      submitBtn.disabled = true;
+      setLoginStatus('Prüfe Code …');
+      sb.auth.verifyOtp({ email: email, token: code, type: 'email' }).then(function(res){
+        submitBtn.disabled = false;
+        if (res.error) {
+          setLoginStatus('Fehler: ' + res.error.message, true);
+        } else if (res.data.session) {
+          onSignedIn(res.data.session);
+        }
+      });
+    }
   });
 
   document.getElementById('settings-logout').addEventListener('click', function(){
